@@ -1,0 +1,24 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#4c1d95" />
+    </linearGradient>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a78bfa" />
+      <stop offset="100%" stop-color="#6d28d9" />
+    </linearGradient>
+    <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c4b5fd" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+  </defs>
+  <!-- Top layer -->
+  <path d="M50 10 L10 30 L50 50 L90 30 Z" fill="url(#grad1)" />
+  
+  <!-- Middle layer -->
+  <path d="M10 40 L50 60 L90 40 L90 50 L50 70 L10 50 Z" fill="url(#grad2)" />
+  
+  <!-- Bottom layer -->
+  <path d="M10 60 L50 80 L90 60 L90 70 L50 90 L10 70 Z" fill="url(#grad3)" />
+</svg>

@@ -1,0 +1,17 @@
+# Node modules
+node_modules/
+
+# Hardhat files
+cache/
+artifacts/
+
+# Coverage
+coverage/
+coverage.json
+
+# Environment variables
+.env
+
+# Misc
+.DS_Store
+*.log

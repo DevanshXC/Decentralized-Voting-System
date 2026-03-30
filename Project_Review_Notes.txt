@@ -1,0 +1,27 @@
+Project Status
+--------------
+"The project is currently fully functional and ready for demonstration. We have successfully built and integrated the complete tech stack: a solidity smart contract for the backend and a React.js frontend. Users can easily connect their MetaMask wallets, view candidates in real time, and securely cast their votes. Admin features for deploying the election and adding candidates are also fully operational."
+
+
+The Consensus Being Used
+------------------------
+"When it comes to consensus, we are utilizing two distinct layers in our architecture:
+
+1. Network Consensus (Ethereum Proof of Stake):
+Because our smart contract is built for the Ethereum Virtual Machine (EVM), it relies on Ethereum's Proof of Stake (PoS) consensus mechanism to validate transactions and secure the voting data immutably. For our local testing and demonstration today, we are using the Hardhat Network, which simulates Ethereum's consensus by automatically mining blocks locally.
+
+2. Election Consensus (Plurality Voting logic):
+Within the smart contract itself, the consensus for deciding the election winner uses a Simple Plurality rule (majority wins). Once the voting period is strictly over, the contract calculates the winner autonomously on-chain, meaning the network agrees on the exact vote tallies without any central authority."
+
+
+Smart Contract Updates & Key Features
+-------------------------------------
+"Our Voting.sol smart contract has been updated to include highly secure election logic. The key technical updates include:
+
+* Time-Bound Voting: We implemented strict 'votingStart' and 'votingEnd' timestamps along with a custom 'votingActive' modifier. This mathematically prevents anyone from voting before the election starts or after the dashboard closes.
+
+* Double-Voting Prevention: We implemented a mapping state ('mapping(address => bool) public voters'). Once a wallet address casts a vote, the contract switches their status to true, and any further attempts to vote are instantly rejected by the blockchain.
+
+* Role-Based Security: We added an 'onlyAdmin' modifier to ensure that only the creator of the election can add candidate names to the ballot.
+
+* On-Chain Verification: We implemented an automated 'getWinner()' function. Instead of humans counting the final votes, the smart contract algorithmically loops through the candidates when the election is over to guarantee absolute accuracy and transparency."

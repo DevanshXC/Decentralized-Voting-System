@@ -1,0 +1,22 @@
+{
+  "name": "decentralized-voting-system",
+  "version": "1.0.0",
+  "description": "",
+  "main": "hardhat.config.js",
+  "type": "module",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.0.6",
+    "dotenv": "^17.3.1",
+    "ethers": "^6.16.0",
+    "hardhat": "^3.2.0"
+  }
+}
