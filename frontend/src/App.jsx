@@ -29,6 +29,9 @@ const I = {
   box: (
     <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor"/><path d="M9 9h6M9 13h4" stroke="currentColor" strokeLinecap="round"/></svg>
   ),
+  activity: (
+    <svg viewBox="0 0 24 24" fill="none"><path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  )
 };
 
 function App() {
@@ -44,11 +47,30 @@ function App() {
   const [resetDuration, setResetDuration] = useState('1000');
   const [updateDuration, setUpdateDuration] = useState('1000');
   const [demoAccountIndex, setDemoAccountIndex] = useState(0);
+  const [voteEvents, setVoteEvents] = useState([]);
 
   useEffect(() => {
     if (contract && account) {
       checkAdmin();
       loadCandidates();
+      loadEvents();
+
+      const onVoted = (voter, candidateId, event) => {
+        setVoteEvents((prev) => [
+          { 
+            voter, 
+            candidateId: candidateId.toString(), 
+            txHash: event.log ? event.log.transactionHash : "0x..." 
+          },
+          ...prev
+        ]);
+      };
+
+      contract.on("Voted", onVoted);
+
+      return () => {
+        contract.off("Voted", onVoted);
+      };
     }
   }, [contract, account]);
 
@@ -134,6 +156,20 @@ function App() {
     }
   };
 
+  const loadEvents = async () => {
+    try {
+      const pastEvents = await contract.queryFilter("Voted");
+      const parsedEvents = pastEvents.map((event) => ({
+        voter: event.args[0],
+        candidateId: event.args[1].toString(),
+        txHash: event.transactionHash
+      }));
+      setVoteEvents(parsedEvents.reverse());
+    } catch (err) {
+      console.error("Error loading events:", err);
+    }
+  };
+
   const addCandidate = async (e) => {
     e.preventDefault();
     if (!newCandidateName) return;
@@ -185,6 +221,7 @@ function App() {
       const tx = await contract.vote(candidateId);
       await tx.wait();
       loadCandidates();
+      /* Note: loadEvents won't be explicitly needed as the onVoted listener handles this. */
     } catch (err) {
       let msg = err.reason || 'Transaction failed';
       if (err.message?.includes('already voted')) msg = 'You have already voted';
@@ -205,210 +242,260 @@ function App() {
 
   const totalVotes = candidates.reduce((s, c) => s + parseInt(c.voteCount), 0);
 
+  const formatAddress = (addr) => (addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : "");
+
   /* ── Render ─────────────────────────────── */
   return (
     <>
-      {/* Animated background orbs */}
       <div className="scene">
         <div className="orb" />
         <div className="orb" />
         <div className="orb" />
       </div>
 
-      <div className="app-shell">
-        <div className="app-container">
-
-          {/* Header */}
-          <div className="header motion-item">
-            <div className="header-badge">
-              <span className="dot" />
-              Ethereum Blockchain
-            </div>
-            <h1>Decentralized Voting</h1>
-            <p className="tagline">Transparent · Immutable · Trustless</p>
+      {/* Floating Notifications */}
+      <div className="notifications-area">
+        {error && (
+          <div className="toast toast-error motion-item">
+            {I.alert} <span>{error}</span>
           </div>
+        )}
+        {loading && (
+          <div className="toast toast-loading motion-item">
+            <div className="spinner" />
+            <span>Processing on-chain transaction…</span>
+          </div>
+        )}
+      </div>
 
-          {/* Toasts */}
-          {error && (
-            <div className="toast toast-error motion-item">
-              {I.alert} <span>{error}</span>
-            </div>
-          )}
+      <div className="app-shell">
+        <div className={`app-container ${account ? 'dashboard-layout' : ''}`}>
 
-          {loading && (
-            <div className="toast toast-loading motion-item">
-              <div className="spinner" />
-              <span>Processing on-chain transaction…</span>
-            </div>
-          )}
-
-          {/* ── Not Connected ──────────────── */}
+          {/* ── Not Connected (Centered) ────── */}
           {!account ? (
-            <div className="card connect-card motion-item">
-              <div className="connect-icon-ring">{I.wallet}</div>
-              <h2>Connect Wallet</h2>
-              <p className="connect-desc">
-                Link your Web3 wallet to participate in decentralized, tamper-proof elections.
-              </p>
-              <div className="connect-buttons">
-                <button className="btn btn-primary" onClick={connectWallet}>
-                  Connect MetaMask
-                </button>
-                <div className="or-divider">or</div>
-                <button className="btn btn-ghost" onClick={connectDemoMode}>
-                  Local Demo Mode
-                </button>
+            <div className="solo-wrapper">
+              <div className="header motion-item">
+                <div className="header-badge">
+                  <span className="dot" />
+                  Ethereum Blockchain
+                </div>
+                <h1>Decentralized Voting</h1>
+                <p className="tagline">Transparent · Immutable · Trustless</p>
+              </div>
+
+              <div className="card connect-card motion-item" style={{ animationDelay: '0.1s' }}>
+                <div className="connect-icon-ring">{I.wallet}</div>
+                <h2>Connect Wallet</h2>
+                <p className="connect-desc">
+                  Link your Web3 wallet to participate in decentralized, tamper-proof elections.
+                </p>
+                <div className="connect-buttons">
+                  <button className="btn btn-primary" onClick={connectWallet}>
+                    Connect MetaMask
+                  </button>
+                  <div className="or-divider">or</div>
+                  <button className="btn btn-ghost" onClick={connectDemoMode}>
+                    Local Demo Mode
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
             <>
-              {/* ── Network Status ─────────── */}
-              <div className="card motion-item">
-                <div className="card-header">
-                  <span className="card-label">Network Status</span>
-                  <div className="status-chip">
-                    <div className="status-dot" />
-                    <span className="status-addr">
-                      {account.slice(0, 6)}…{account.slice(-4)}
-                    </span>
-                    {isAdmin && <span className="badge badge-admin">Admin</span>}
+              {/* ── Left Sidebar (Desktop) ──── */}
+              <div className="sidebar">
+                <div className="header motion-item" style={{ textAlign: "left", padding: "0 0 10px 0" }}>
+                  <div className="header-badge">
+                    <span className="dot" />
+                    Ethereum Mainnet
                   </div>
+                  <h1 style={{ fontSize: "1.75rem" }}>Decentralized Voting</h1>
+                  <p className="tagline">Transparent · Immutable</p>
                 </div>
 
-                {demoMode && (
-                  <div className="demo-bar">
-                    {[0, 1, 2, 3].map((i) => (
-                      <button
-                        key={i}
-                        onClick={() => switchDemoAccount(i)}
-                        className={`demo-btn ${demoAccountIndex === i ? 'active' : ''}`}
-                      >
-                        {i === 0 ? 'Admin' : `Voter ${i}`}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* ── Admin Panel ────────────── */}
-              {isAdmin && (
-                <div className="card motion-item">
+                <div className="card motion-item" style={{ animationDelay: '0.1s' }}>
                   <div className="card-header">
-                    <span className="card-label">Admin Controls</span>
-                    <span className="badge badge-restricted">Restricted</span>
+                    <span className="card-label">Network Status</span>
+                    <div className="status-chip">
+                      <div className="status-dot" />
+                      <span className="status-addr">{formatAddress(account)}</span>
+                      {isAdmin && <span className="badge badge-admin">Admin</span>}
+                    </div>
                   </div>
 
-                  <form onSubmit={addCandidate} className="form-row">
-                    <input
-                      type="text"
-                      className="input"
-                      placeholder="Candidate name…"
-                      value={newCandidateName}
-                      onChange={(e) => setNewCandidateName(e.target.value)}
-                    />
-                    <button type="submit" disabled={loading} className="btn btn-primary">
-                      Register
-                    </button>
-                  </form>
-
-                  <div className="form-divider" />
-
-                  <form onSubmit={changeDuration} className="form-row">
-                    <input
-                      type="number"
-                      className="input"
-                      placeholder="Duration (min)"
-                      value={updateDuration}
-                      onChange={(e) => setUpdateDuration(e.target.value)}
-                      min="1"
-                    />
-                    <button type="submit" disabled={loading} className="btn btn-emerald">
-                      Update
-                    </button>
-                  </form>
-
-                  <div className="form-divider" />
-
-                  <form onSubmit={resetElection} className="form-row">
-                    <input
-                      type="number"
-                      className="input"
-                      placeholder="New duration (min)"
-                      value={resetDuration}
-                      onChange={(e) => setResetDuration(e.target.value)}
-                      min="1"
-                    />
-                    <button type="submit" disabled={loading} className="btn btn-danger">
-                      Reset Election
-                    </button>
-                  </form>
-                </div>
-              )}
-
-              {/* ── Candidates Roster ─────── */}
-              <div className="card motion-item">
-                <div className="card-header">
-                  <span className="card-label">Election Roster</span>
-                  <span className="card-label" style={{ color: 'var(--text-secondary)' }}>
-                    {totalVotes} vote{totalVotes !== 1 && 's'}
-                  </span>
+                  {demoMode && (
+                    <div className="demo-bar">
+                      {[0, 1, 2, 3].map((i) => (
+                        <button
+                          key={i}
+                          onClick={() => switchDemoAccount(i)}
+                          className={`demo-btn ${demoAccountIndex === i ? 'active' : ''}`}
+                        >
+                          {i === 0 ? 'Admin' : `Voter ${i}`}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                {candidates.length === 0 ? (
-                  <div className="empty">
-                    {I.box}
-                    <p>No candidates registered yet.</p>
-                  </div>
-                ) : (
-                  <div className="candidates-grid">
-                    {candidates.map((c, idx) => {
-                      const pct = totalVotes > 0 ? (parseInt(c.voteCount) / totalVotes) * 100 : 0;
-                      return (
-                        <div key={c.id} className="candidate-row">
-                          <div className="candidate-rank">{idx + 1}</div>
-                          <div className="candidate-body">
-                            <div className="candidate-top">
-                              <span className="candidate-name">{c.name}</span>
-                              <span className="candidate-count">{c.voteCount}</span>
-                            </div>
-                            <div className="bar-track">
-                              <div className="bar-fill" style={{ width: `${pct}%` }} />
-                            </div>
-                          </div>
-                          <div className="candidate-action">
-                            <button
-                              onClick={() => vote(c.id)}
-                              disabled={loading}
-                              className="btn btn-vote"
-                            >
-                              Vote
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                {isAdmin && (
+                  <div className="card motion-item" style={{ animationDelay: '0.15s' }}>
+                    <div className="card-header">
+                      <span className="card-label">Admin Controls</span>
+                      <span className="badge badge-restricted">Restricted</span>
+                    </div>
+                    <form onSubmit={addCandidate} className="form-row">
+                      <input
+                        type="text"
+                        className="input"
+                        placeholder="Register candidate…"
+                        value={newCandidateName}
+                        onChange={(e) => setNewCandidateName(e.target.value)}
+                      />
+                      <button type="submit" disabled={loading} className="btn btn-primary" style={{ padding: "0 14px" }}>
+                        Add
+                      </button>
+                    </form>
+                    <div className="form-divider" />
+                    <form onSubmit={changeDuration} className="form-row">
+                      <input
+                        type="number"
+                        className="input"
+                        placeholder="Duration (min)"
+                        value={updateDuration}
+                        onChange={(e) => setUpdateDuration(e.target.value)}
+                        min="1"
+                      />
+                      <button type="submit" disabled={loading} className="btn btn-emerald" style={{ padding: "0 14px" }}>
+                        Update
+                      </button>
+                    </form>
+                    <div className="form-divider" />
+                    <form onSubmit={resetElection} className="form-row">
+                      <input
+                        type="number"
+                        className="input"
+                        placeholder="New mins"
+                        value={resetDuration}
+                        onChange={(e) => setResetDuration(e.target.value)}
+                        min="1"
+                      />
+                      <button type="submit" disabled={loading} className="btn btn-danger" style={{ padding: "0 14px" }}>
+                        Reset
+                      </button>
+                    </form>
                   </div>
                 )}
               </div>
 
-              {/* ── Winner ────────────────── */}
-              <div className="card motion-item">
-                <button onClick={getWinner} className="btn btn-reveal">
-                  {I.trophy} Reveal Winner
-                </button>
-
-                {winner && (
-                  <div className="winner-reveal">
-                    <svg className="trophy-icon" viewBox="0 0 24 24" fill="none">
-                      <path d="M8 21h8M12 17v4M7 4h10M5 4h14a1 1 0 011 1v3c0 4.418-3.582 8-8 8S4 12.418 4 8V5a1 1 0 011-1z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    <h3>{winner.name}</h3>
-                    <p>{winner.voteCount} votes — verified on-chain</p>
+              {/* ── Right Column (Main View) ── */}
+              <div className="main-content">
+                <div className="card motion-item" style={{ animationDelay: '0.2s', padding: '32px' }}>
+                  <div className="card-header">
+                    <span className="card-label" style={{ fontSize: '0.85rem' }}>{I.users} Election Roster</span>
+                    <span className="card-label" style={{ color: 'var(--text-secondary)' }}>
+                      Total Turnout: {totalVotes} vote{totalVotes !== 1 && 's'}
+                    </span>
                   </div>
-                )}
+
+                  {candidates.length === 0 ? (
+                    <div className="empty">
+                      {I.box}
+                      <p>The ballot is currently empty. Wait for admin registration.</p>
+                    </div>
+                  ) : (
+                    <div className="candidates-grid">
+                      {candidates.map((c, idx) => {
+                        const pct = totalVotes > 0 ? (parseInt(c.voteCount) / totalVotes) * 100 : 0;
+                        return (
+                          <div key={c.id} className="candidate-row">
+                            <div className="candidate-rank">{idx + 1}</div>
+                            <div className="candidate-body">
+                              <div className="candidate-top">
+                                <span className="candidate-name">{c.name}</span>
+                                <span className="candidate-count">{c.voteCount}</span>
+                              </div>
+                              <div className="bar-track">
+                                <div className="bar-fill" style={{ width: `${pct}%` }} />
+                              </div>
+                            </div>
+                            <div className="candidate-action">
+                              <button
+                                onClick={() => vote(c.id)}
+                                disabled={loading}
+                                className="btn btn-vote"
+                              >
+                                Cast Vote
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: '24px' }}>
+                    <button onClick={getWinner} className="btn btn-reveal text-center w-full" style={{ padding: '16px' }}>
+                      {I.trophy} Reveal Official Winner
+                    </button>
+
+                    {winner && (
+                      <div className="winner-reveal">
+                        <svg className="trophy-icon" viewBox="0 0 24 24" fill="none">
+                          <path d="M8 21h8M12 17v4M7 4h10M5 4h14a1 1 0 011 1v3c0 4.418-3.582 8-8 8S4 12.418 4 8V5a1 1 0 011-1z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        <h3>{winner.name}</h3>
+                        <p>Secured the election with {winner.voteCount} recorded votes.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── Live Activity Event Feed ── */}
+                <div className="card motion-item" style={{ animationDelay: '0.25s' }}>
+                  <div className="card-header">
+                    <span className="card-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                       <span style={{color: 'var(--emerald)'}}>{I.activity}</span> Live Vote Tracking
+                    </span>
+                    <span className="status-dot"></span>
+                  </div>
+
+                  {voteEvents.length === 0 ? (
+                    <p style={{ color: "var(--text-tertiary)", fontSize: "0.85rem", textAlign: "center", padding: "20px" }}>
+                      Listening to the blockchain for new cast votes...
+                    </p>
+                  ) : (
+                    <div className="event-feed">
+                      {voteEvents.map((ev, i) => {
+                        const candidate = candidates.find(c => c.id === ev.candidateId);
+                        const assignedName = candidate ? candidate.name : `Candidate ${ev.candidateId}`;
+                        return (
+                          <div className="event-item" key={i + ev.txHash}>
+                            <div className="event-avatar">{I.shield}</div>
+                            <div className="event-content">
+                              <span className="event-voter">{formatAddress(ev.voter)}</span> 
+                              {" "}voted for{" "}
+                              <span className="event-candidate">{assignedName}</span>
+                            </div>
+                            <a 
+                              href={`https://etherscan.io/tx/${ev.txHash}`} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              className="event-tx"
+                              title="View hypothetical Tx on Etherscan"
+                            >
+                              Tx
+                            </a>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}
+
         </div>
       </div>
     </>
