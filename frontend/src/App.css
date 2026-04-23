@@ -4,18 +4,19 @@
    ═══════════════════════════════════════════ */
 
 :root {
-  --bg-void: #07060b;
-  --bg-surface: rgba(14, 12, 22, 0.85);
-  --bg-elevated: rgba(22, 18, 38, 0.75);
-  --bg-input: rgba(10, 8, 18, 0.6);
+  /* ── Dark Theme (Default — True Black) ── */
+  --bg-void: #000000;
+  --bg-surface: rgba(10, 10, 10, 0.92);
+  --bg-elevated: rgba(18, 18, 18, 0.85);
+  --bg-input: rgba(8, 8, 8, 0.7);
 
-  --border-dim: rgba(255, 255, 255, 0.06);
-  --border-subtle: rgba(255, 255, 255, 0.1);
+  --border-dim: rgba(255, 255, 255, 0.07);
+  --border-subtle: rgba(255, 255, 255, 0.12);
   --border-focus: rgba(139, 92, 246, 0.5);
 
-  --text-primary: #f4f0ff;
-  --text-secondary: #a8a0c0;
-  --text-tertiary: #6a6280;
+  --text-primary: #f0f0f0;
+  --text-secondary: #a0a0a0;
+  --text-tertiary: #5a5a5a;
 
   --accent: #8b5cf6;
   --accent-dim: rgba(139, 92, 246, 0.15);
@@ -33,6 +34,16 @@
   --amber-dim: rgba(251, 191, 36, 0.08);
   --amber-glow: rgba(251, 191, 36, 0.3);
 
+  --card-candidate-bg: rgba(255, 255, 255, 0.025);
+  --card-candidate-hover: rgba(255, 255, 255, 0.055);
+  --event-item-bg: rgba(255, 255, 255, 0.02);
+  --event-item-hover: rgba(255, 255, 255, 0.04);
+  --bar-track-bg: rgba(255, 255, 255, 0.04);
+  --orb-opacity: 1;
+  --shadow-strength: 0.4;
+  --initials-color: rgba(255, 255, 255, 0.85);
+  --initials-border: rgba(255, 255, 255, 0.08);
+
   --radius: 16px;
   --radius-sm: 12px;
   --radius-xs: 8px;
@@ -44,12 +55,95 @@
   --font: 'Outfit', -apple-system, sans-serif;
 }
 
+/* ── Light Theme ────────────────────────── */
+[data-theme="light"] {
+  --bg-void: #f5f5f7;
+  --bg-surface: rgba(255, 255, 255, 0.85);
+  --bg-elevated: rgba(245, 245, 247, 0.9);
+  --bg-input: rgba(240, 240, 242, 0.8);
+
+  --border-dim: rgba(0, 0, 0, 0.07);
+  --border-subtle: rgba(0, 0, 0, 0.12);
+  --border-focus: rgba(139, 92, 246, 0.45);
+
+  --text-primary: #1a1a1a;
+  --text-secondary: #555555;
+  --text-tertiary: #888888;
+
+  --accent: #7c3aed;
+  --accent-dim: rgba(124, 58, 237, 0.1);
+  --accent-glow: rgba(124, 58, 237, 0.2);
+  --accent-hover: #6d28d9;
+
+  --emerald: #059669;
+  --emerald-dim: rgba(5, 150, 105, 0.08);
+  --emerald-glow: rgba(5, 150, 105, 0.15);
+
+  --rose: #e11d48;
+  --rose-dim: rgba(225, 29, 72, 0.07);
+
+  --amber: #d97706;
+  --amber-dim: rgba(217, 119, 6, 0.07);
+  --amber-glow: rgba(217, 119, 6, 0.15);
+
+  --card-candidate-bg: rgba(0, 0, 0, 0.02);
+  --card-candidate-hover: rgba(0, 0, 0, 0.04);
+  --event-item-bg: rgba(0, 0, 0, 0.02);
+  --event-item-hover: rgba(0, 0, 0, 0.04);
+  --bar-track-bg: rgba(0, 0, 0, 0.06);
+  --orb-opacity: 0.4;
+  --shadow-strength: 0.1;
+  --initials-color: rgba(0, 0, 0, 0.7);
+  --initials-border: rgba(0, 0, 0, 0.1);
+}
+
+/* ── Theme Toggle Button ────────────────── */
+.theme-toggle {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 100;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--border-dim);
+  background: var(--bg-surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s var(--ease-out-expo);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, var(--shadow-strength));
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: scale(1.08);
+  box-shadow: 0 6px 24px var(--accent-glow);
+}
+
+.theme-toggle svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.8;
+  transition: transform 0.4s var(--ease-spring);
+}
+
+.theme-toggle:hover svg {
+  transform: rotate(20deg);
+}
+
 /* ── Background Scene ───────────────────── */
 body {
   font-family: var(--font);
   background: var(--bg-void);
   color: var(--text-primary);
   overflow-x: hidden;
+  transition: background 0.4s ease, color 0.4s ease;
 }
 
 .scene {
@@ -64,6 +158,7 @@ body {
   border-radius: 50%;
   filter: blur(120px);
   opacity: 0;
+  --_orb-max-opacity: var(--orb-opacity, 1);
   animation: orbPulse 8s var(--ease-out-expo) infinite alternate,
              orbFadeIn 1.5s var(--ease-out-expo) forwards;
 }
@@ -101,7 +196,7 @@ body {
 }
 
 @keyframes orbFadeIn {
-  to { opacity: 1; }
+  to { opacity: var(--orb-opacity, 1); }
 }
 
 .scene::after {
@@ -209,7 +304,7 @@ body {
   font-weight: 700;
   letter-spacing: -0.04em;
   margin: 0 0 10px;
-  background: linear-gradient(135deg, #fff 30%, var(--text-secondary));
+  background: linear-gradient(135deg, var(--text-primary) 30%, var(--text-secondary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -579,6 +674,12 @@ body {
   gap: 12px;
 }
 
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .input {
   flex: 1;
   font-family: var(--font);
@@ -607,113 +708,244 @@ body {
   margin: 16px 0;
 }
 
-/* ── Candidate List ─────────────────────── */
-.candidates-grid {
+/* ── Image Upload Field ─────────────────── */
+.image-upload-field {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
-.candidate-row {
+.image-upload-label {
   display: flex;
   align-items: center;
-  padding: 16px 20px;
-  background: rgba(255, 255, 255, 0.02);
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+}
+
+.image-upload-label svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+}
+
+.image-upload-row {
+  display: flex;
+  gap: 8px;
+}
+
+.image-upload-row .input {
+  font-size: 0.82rem;
+  padding: 10px 12px;
+}
+
+.upload-btn {
+  padding: 10px !important;
+  flex-shrink: 0;
+}
+
+.upload-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.image-preview {
+  margin-top: 4px;
+  border-radius: var(--radius-xs);
+  overflow: hidden;
   border: 1px solid var(--border-dim);
-  border-radius: var(--radius-sm);
-  transition: all 0.3s var(--ease-out-expo);
-  animation: candidateIn 0.5s var(--ease-out-expo) backwards;
-}
-
-.candidate-row:nth-child(1) { animation-delay: 0.05s; }
-.candidate-row:nth-child(2) { animation-delay: 0.1s; }
-.candidate-row:nth-child(3) { animation-delay: 0.15s; }
-.candidate-row:nth-child(4) { animation-delay: 0.2s; }
-
-@keyframes candidateIn {
-  from { opacity: 0; transform: translateX(-16px); }
-}
-
-.candidate-row:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: var(--border-subtle);
-  transform: translateX(6px);
-}
-
-.candidate-rank {
-  width: 32px;
-  height: 32px;
+  max-height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-tertiary);
-  margin-right: 18px;
-  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.2);
 }
 
-.candidate-body {
-  flex: 1;
-  min-width: 0;
+.image-preview img {
+  max-height: 80px;
+  max-width: 100%;
+  object-fit: contain;
 }
 
-.candidate-top {
+/* ═══════════════════════════════════════════
+   CANDIDATE CARD GRID
+   ═══════════════════════════════════════════ */
+.candidates-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.candidate-card {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.candidate-name {
-  font-weight: 500;
-  font-size: 1rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.candidate-count {
-  font-size: 0.85rem;
-  color: var(--text-tertiary);
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-  margin-left: 12px;
-}
-
-.bar-track {
-  height: 4px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.bar-fill {
-  height: 100%;
-  border-radius: 10px;
-  background: linear-gradient(90deg, var(--accent), #a78bfa);
-  transition: width 1s var(--ease-out-expo);
+  flex-direction: column;
+  align-items: center;
+  background: var(--card-candidate-bg);
+  border: 1px solid var(--border-dim);
+  border-radius: 20px;
+  padding: 28px 20px 20px;
+  text-align: center;
+  transition: all 0.4s var(--ease-out-expo);
   position: relative;
+  animation: cardIn 0.5s var(--ease-out-expo) backwards;
 }
 
-.bar-fill::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: -1px;
-  bottom: -1px;
-  width: 16px;
-  background: white;
-  border-radius: 50%;
-  filter: blur(4px);
-  opacity: 0.4;
+.candidate-card:nth-child(1) { animation-delay: 0.05s; }
+.candidate-card:nth-child(2) { animation-delay: 0.1s; }
+.candidate-card:nth-child(3) { animation-delay: 0.15s; }
+.candidate-card:nth-child(4) { animation-delay: 0.2s; }
+.candidate-card:nth-child(5) { animation-delay: 0.25s; }
+.candidate-card:nth-child(6) { animation-delay: 0.3s; }
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
 }
 
-.candidate-action {
-  margin-left: 18px;
+.candidate-card:hover {
+  background: var(--card-candidate-hover);
+  border-color: rgba(139, 92, 246, 0.25);
+  transform: translateY(-6px);
+  box-shadow: 0 16px 40px -10px rgba(139, 92, 246, 0.15),
+              0 0 0 1px rgba(139, 92, 246, 0.1);
+}
+
+/* ── Candidate Photo ───────────────────── */
+.candidate-photo-container {
+  width: 120px;
+  height: 120px;
+  position: relative;
+  margin-bottom: 16px;
   flex-shrink: 0;
+}
+
+.candidate-photo {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(139, 92, 246, 0.2);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.candidate-card:hover .candidate-photo {
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 24px rgba(139, 92, 246, 0.2);
+}
+
+/* Initials Fallback */
+.candidate-initials {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--initials-color);
+  letter-spacing: 0.05em;
+  border: 3px solid var(--initials-border);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.candidate-card:hover .candidate-initials {
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 24px rgba(139, 92, 246, 0.15);
+}
+
+/* ── Party Logo Badge ──────────────────── */
+.party-logo-badge {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-surface);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: transform 0.3s var(--ease-spring);
+}
+
+.candidate-card:hover .party-logo-badge {
+  transform: scale(1.1);
+}
+
+.party-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.party-logo-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-tertiary);
+}
+
+.party-logo-fallback svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.8;
+}
+
+/* ── Card Name & Party ─────────────────── */
+.candidate-card-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.candidate-party-name {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  margin-bottom: 14px;
+  display: block;
+}
+
+/* ── Card Stats ────────────────────────── */
+.candidate-card-stats {
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+.vote-count-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: var(--radius-pill);
+  padding: 3px 12px;
+  margin-bottom: 8px;
+  letter-spacing: 0.03em;
+}
+
+.card-bar {
+  border-radius: 6px;
+}
+
+.card-vote-btn {
+  width: 100%;
+  margin-top: 2px;
 }
 
 /* ── Live Activity Event Feed ───────────── */
@@ -743,7 +975,7 @@ body {
   align-items: center;
   gap: 14px;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--event-item-bg);
   border: 1px solid var(--border-dim);
   border-radius: var(--radius-sm);
   font-size: 0.88rem;
@@ -752,7 +984,7 @@ body {
 }
 
 .event-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--event-item-hover);
 }
 
 @keyframes listIn {
@@ -878,7 +1110,7 @@ body {
 .spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.08);
+  border: 2px solid var(--border-dim);
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -931,6 +1163,35 @@ body {
   color: var(--text-tertiary);
 }
 
+/* ── Vote Progress Bar (shared) ─────────── */
+.bar-track {
+  height: 4px;
+  background: var(--bar-track-bg);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--accent), #a78bfa);
+  transition: width 1s var(--ease-out-expo);
+  position: relative;
+}
+
+.bar-fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: -1px;
+  bottom: -1px;
+  width: 16px;
+  background: white;
+  border-radius: 50%;
+  filter: blur(4px);
+  opacity: 0.4;
+}
+
 /* ── Responsive ─────────────────────────── */
 @media (max-width: 960px) {
   .dashboard-layout {
@@ -962,16 +1223,29 @@ body {
   .form-row {
     flex-direction: column;
   }
-  .candidate-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+  .candidates-card-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
   }
-  .candidate-action {
-    margin-left: 0;
-    align-self: flex-end;
+  .candidate-photo-container {
+    width: 90px;
+    height: 90px;
   }
-  .candidate-rank {
-    display: none;
+  .candidate-photo {
+    width: 90px;
+    height: 90px;
+  }
+  .candidate-initials {
+    width: 90px;
+    height: 90px;
+    font-size: 1.6rem;
+  }
+  .party-logo-badge {
+    width: 32px;
+    height: 32px;
+  }
+  .party-logo-fallback svg {
+    width: 14px;
+    height: 14px;
   }
 }

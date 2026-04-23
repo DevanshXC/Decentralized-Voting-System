@@ -15,9 +15,8 @@ async function main() {
   const artifactData = fs.readFileSync(artifactPath, "utf8");
   const artifact = JSON.parse(artifactData);
 
-  const duration = 1000;
   const factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, signer);
-  const voting = await factory.deploy(duration);
+  const voting = await factory.deploy();
 
   await voting.waitForDeployment();
 
