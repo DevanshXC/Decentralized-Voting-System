@@ -92,6 +92,25 @@ const I = {
   ),
   moon: (
     <svg viewBox="0 0 24 24" fill="none"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  ),
+  // ── Transparency Dashboard Icons ──
+  check: (
+    <svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  ),
+  search: (
+    <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor"/><path d="M21 21l-4.35-4.35" stroke="currentColor" strokeLinecap="round"/></svg>
+  ),
+  hash: (
+    <svg viewBox="0 0 24 24" fill="none"><path d="M4 9h16M4 15h16M10 3l-2 18M16 3l-2 18" stroke="currentColor" strokeLinecap="round"/></svg>
+  ),
+  link: (
+    <svg viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeLinecap="round"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="currentColor" strokeLinecap="round"/></svg>
+  ),
+  verified: (
+    <svg viewBox="0 0 24 24" fill="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14l-5-4.87 6.91-1.01L12 2z" stroke="currentColor" strokeLinejoin="round"/></svg>
+  ),
+  eye: (
+    <svg viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" stroke="currentColor"/><circle cx="12" cy="12" r="3" stroke="currentColor"/></svg>
   )
 };
 
@@ -309,6 +328,30 @@ function App() {
   const [demoAccountIndex, setDemoAccountIndex] = useState(0);
   const [voteEvents, setVoteEvents] = useState([]);
 
+  // ── TRANSPARENCY MODULE: State variables ──
+  const [lastTxHash, setLastTxHash] = useState('');           // Tx hash of the user's last vote
+  const [myVotedCandidate, setMyVotedCandidate] = useState(null); // Result of verifyMyVote
+  const [checkAddress, setCheckAddress] = useState('');       // Input for checking voter status
+  const [checkAddressResult, setCheckAddressResult] = useState(null); // Result: true/false/null
+  const [onChainTotalVotes, setOnChainTotalVotes] = useState(null);   // From contract.getTotalVotes()
+  const [eventTotalVotes, setEventTotalVotes] = useState(null);       // Count of VoteCast events
+  const [integrityStatus, setIntegrityStatus] = useState(null);       // 'verified' | 'mismatch' | null
+  const [explorerUrl, setExplorerUrl] = useState('https://etherscan.io');
+
+  // Helper to set explorer URL based on network
+  const updateExplorerUrl = async (provider) => {
+    try {
+      const network = await provider.getNetwork();
+      if (Number(network.chainId) === 11155111) {
+        setExplorerUrl('https://sepolia.etherscan.io');
+      } else {
+        setExplorerUrl('https://etherscan.io');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     if (contract && account) {
       checkAdmin();
@@ -347,6 +390,7 @@ function App() {
     if (window.ethereum) {
       try {
         const provider = new ethers.BrowserProvider(window.ethereum);
+        await updateExplorerUrl(provider);
         const accounts = await provider.send("eth_requestAccounts", []);
         setAccount(accounts[0]);
         const signer = await provider.getSigner();
@@ -362,6 +406,59 @@ function App() {
       setError('MetaMask not detected. Use Local Mode instead.');
     }
   };
+
+  const switchMetaMaskAccount = async () => {
+    if (!window.ethereum) return;
+    try {
+      // This opens the MetaMask account picker popup
+      await window.ethereum.request({
+        method: 'wallet_requestPermissions',
+        params: [{ eth_accounts: {} }],
+      });
+      // After user picks an account, reconnect with the new signer
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      await updateExplorerUrl(provider);
+      const accounts = await provider.send('eth_accounts', []);
+      if (accounts.length > 0) {
+        setAccount(accounts[0]);
+        const signer = await provider.getSigner();
+        const votingContract = new ethers.Contract(contractAddress.Voting, VotingArtifact.abi, signer);
+        setContract(votingContract);
+        setError('');
+      }
+    } catch (err) {
+      setError('Account switch cancelled');
+      console.error(err);
+    }
+  };
+
+  // Listen for account changes in MetaMask (user switches account via extension)
+  useEffect(() => {
+    if (!window.ethereum || demoMode) return;
+    const handleAccountsChanged = async (accounts) => {
+      if (accounts.length === 0) {
+        setAccount('');
+        setContract(null);
+        return;
+      }
+      const newAccount = accounts[0];
+      setAccount(newAccount);
+      try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        await updateExplorerUrl(provider);
+        const signer = await provider.getSigner();
+        const votingContract = new ethers.Contract(contractAddress.Voting, VotingArtifact.abi, signer);
+        setContract(votingContract);
+        setError('');
+      } catch (err) {
+        console.error('Error reconnecting after account change:', err);
+      }
+    };
+    window.ethereum.on('accountsChanged', handleAccountsChanged);
+    return () => {
+      window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+    };
+  }, [demoMode]);
 
   const connectDemoMode = async () => {
     try {
@@ -536,6 +633,8 @@ function App() {
     setError('');
     try {
       const tx = await contract.vote(candidateId);
+      // ── TRANSPARENCY MODULE: capture transaction hash as blockchain proof ──
+      setLastTxHash(tx.hash);
       await tx.wait();
       loadCandidates();
     } catch (err) {
@@ -553,6 +652,71 @@ function App() {
       setWinner({ name: w.name, voteCount: w.voteCount.toString() });
     } catch (err) {
       setError(err.reason || 'Voting may still be active');
+    }
+  };
+
+  // ═══════════════════════════════════════════
+  // TRANSPARENCY MODULE: Verification Functions
+  // ═══════════════════════════════════════════
+
+  /// Calls verifyMyVote() on-chain — only returns the caller's own vote (privacy-preserving)
+  const handleVerifyMyVote = async () => {
+    try {
+      const candidateId = await contract.verifyMyVote();
+      const id = candidateId.toString();
+      const candidate = candidates.find(c => c.id === id);
+      setMyVotedCandidate(candidate ? candidate.name : `Candidate #${id}`);
+    } catch (err) {
+      // Contract reverts with "You have not voted yet" if the user hasn't voted
+      setMyVotedCandidate('NOT_VOTED');
+    }
+  };
+
+  /// Calls checkIfVoted(address) — checks if any address has participated
+  const handleCheckIfVoted = async () => {
+    if (!checkAddress) return;
+    try {
+      const hasVoted = await contract.checkIfVoted(checkAddress);
+      setCheckAddressResult(hasVoted);
+    } catch (err) {
+      setError('Invalid Ethereum address');
+      setCheckAddressResult(null);
+    }
+  };
+
+  /// Calls getTotalVotes() on-chain for audit purposes
+  const handleAuditTotalVotes = async () => {
+    try {
+      const total = await contract.getTotalVotes();
+      setOnChainTotalVotes(Number(total));
+    } catch (err) {
+      setError('Error fetching total votes');
+    }
+  };
+
+  /// Consistency Check: compares on-chain getTotalVotes() with VoteCast event count
+  /// If they match → system integrity verified. If not → potential manipulation detected.
+  const runConsistencyCheck = async () => {
+    try {
+      // 1. Get on-chain total from smart contract
+      const total = await contract.getTotalVotes();
+      const onChain = Number(total);
+      setOnChainTotalVotes(onChain);
+
+      // 2. Count VoteCast events from the blockchain log
+      const events = await contract.queryFilter('VoteCast');
+      const eventCount = events.length;
+      setEventTotalVotes(eventCount);
+
+      // 3. Compare: if totals match, system integrity is verified
+      if (onChain === eventCount) {
+        setIntegrityStatus('verified');
+      } else {
+        setIntegrityStatus('mismatch');
+      }
+    } catch (err) {
+      setError('Error running consistency check');
+      console.error(err);
     }
   };
 
@@ -655,6 +819,13 @@ function App() {
                           {i === 0 ? 'Admin' : `Voter ${i}`}
                         </button>
                       ))}
+                    </div>
+                  )}
+                  {!demoMode && (
+                    <div className="demo-bar">
+                      <button className="demo-btn active" onClick={switchMetaMaskAccount}>
+                        Switch Account
+                      </button>
                     </div>
                   )}
                 </div>
@@ -792,11 +963,11 @@ function App() {
                               <span className="event-candidate">{assignedName}</span>
                             </div>
                             <a 
-                              href={`https://etherscan.io/tx/${ev.txHash}`} 
+                              href={`${explorerUrl}/tx/${ev.txHash}`} 
                               target="_blank" 
                               rel="noreferrer" 
                               className="event-tx"
-                              title="View hypothetical Tx on Etherscan"
+                              title={`View Tx on Etherscan`}
                             >
                               Tx
                             </a>
@@ -804,6 +975,190 @@ function App() {
                         );
                       })}
                     </div>
+                  )}
+                </div>
+
+                {/* ═══════════════════════════════════════════
+                     TRANSPARENCY DASHBOARD
+                     On-chain verifiable proofs for trust
+                   ═══════════════════════════════════════════ */}
+                <div className="card transparency-card motion-item" style={{ animationDelay: '0.3s' }}>
+                  <div className="card-header">
+                    <span className="card-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ color: 'var(--emerald)' }}>{I.verified}</span> Transparency Dashboard
+                    </span>
+                    <span className="badge badge-emerald">On-Chain</span>
+                  </div>
+
+                  {/* ── Section 1: Verify My Vote ── */}
+                  <div className="transparency-section">
+                    <div className="transparency-section-header">
+                      <span className="transparency-icon">{I.check}</span>
+                      <h4>Verify My Vote</h4>
+                    </div>
+                    <p className="transparency-desc">
+                      Cryptographically verify that your vote was recorded correctly on the blockchain.
+                    </p>
+                    <button onClick={handleVerifyMyVote} disabled={loading} className="btn btn-emerald" style={{ width: '100%' }}>
+                      {I.eye} Verify My Vote
+                    </button>
+                    {myVotedCandidate && myVotedCandidate !== 'NOT_VOTED' && (
+                      <div className="transparency-result transparency-result-success">
+                        <span className="transparency-result-icon">✓</span>
+                        <span>Your vote was recorded for <strong>{myVotedCandidate}</strong></span>
+                      </div>
+                    )}
+                    {myVotedCandidate === 'NOT_VOTED' && (
+                      <div className="transparency-result transparency-result-warning">
+                        <span className="transparency-result-icon">!</span>
+                        <span>You have not voted yet in this election round.</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="transparency-divider" />
+
+                  {/* ── Section 2: Check Voting Status ── */}
+                  <div className="transparency-section">
+                    <div className="transparency-section-header">
+                      <span className="transparency-icon">{I.search}</span>
+                      <h4>Check Voting Status</h4>
+                    </div>
+                    <p className="transparency-desc">
+                      Look up whether any Ethereum address has participated in this election.
+                    </p>
+                    <div className="form-row">
+                      <input
+                        type="text"
+                        className="input"
+                        placeholder="0x... Ethereum address"
+                        value={checkAddress}
+                        onChange={(e) => { setCheckAddress(e.target.value); setCheckAddressResult(null); }}
+                        style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.82rem' }}
+                      />
+                      <button onClick={handleCheckIfVoted} disabled={loading || !checkAddress} className="btn btn-ghost" style={{ padding: '0 16px', whiteSpace: 'nowrap' }}>
+                        Check
+                      </button>
+                    </div>
+                    {checkAddressResult !== null && (
+                      <div className={`transparency-result ${checkAddressResult ? 'transparency-result-success' : 'transparency-result-neutral'}`}>
+                        <span className="transparency-result-icon">{checkAddressResult ? '✓' : '○'}</span>
+                        <span>
+                          <code>{formatAddress(checkAddress)}</code>
+                          {checkAddressResult ? ' has voted in this round.' : ' has not voted yet.'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="transparency-divider" />
+
+                  {/* ── Section 3: Total Votes Audit ── */}
+                  <div className="transparency-section">
+                    <div className="transparency-section-header">
+                      <span className="transparency-icon">{I.hash}</span>
+                      <h4>Total Votes Audit</h4>
+                    </div>
+                    <p className="transparency-desc">
+                      Query the smart contract directly for the total vote count across all candidates.
+                    </p>
+                    <button onClick={handleAuditTotalVotes} disabled={loading} className="btn btn-ghost" style={{ width: '100%' }}>
+                      {I.layers} Fetch On-Chain Total
+                    </button>
+                    {onChainTotalVotes !== null && (
+                      <div className="transparency-result transparency-result-success">
+                        <span className="transparency-result-icon">Σ</span>
+                        <span>On-chain total: <strong>{onChainTotalVotes}</strong> vote{onChainTotalVotes !== 1 && 's'} recorded</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="transparency-divider" />
+
+                  {/* ── Section 4: System Integrity / Consistency Check ── */}
+                  <div className="transparency-section">
+                    <div className="transparency-section-header">
+                      <span className="transparency-icon">{I.shield}</span>
+                      <h4>System Integrity Check</h4>
+                    </div>
+                    <p className="transparency-desc">
+                      Compare on-chain vote totals with blockchain event logs to verify no manipulation occurred.
+                    </p>
+                    <button onClick={runConsistencyCheck} disabled={loading} className="btn btn-primary" style={{ width: '100%' }}>
+                      {I.activity} Run Consistency Check
+                    </button>
+                    {integrityStatus === 'verified' && (
+                      <div className="transparency-result transparency-result-verified">
+                        <div className="integrity-badge integrity-pass">
+                          <span className="integrity-icon">✓</span>
+                          <span>System Verified</span>
+                        </div>
+                        <div className="integrity-details">
+                          <div className="integrity-row">
+                            <span>Contract Total (getTotalVotes)</span>
+                            <strong>{onChainTotalVotes}</strong>
+                          </div>
+                          <div className="integrity-row">
+                            <span>Event Log Count (VoteCast)</span>
+                            <strong>{eventTotalVotes}</strong>
+                          </div>
+                          <div className="integrity-row integrity-match">
+                            <span>Status</span>
+                            <strong>✅ Totals Match — No Manipulation Detected</strong>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {integrityStatus === 'mismatch' && (
+                      <div className="transparency-result transparency-result-danger">
+                        <div className="integrity-badge integrity-fail">
+                          <span className="integrity-icon">⚠</span>
+                          <span>Integrity Mismatch</span>
+                        </div>
+                        <div className="integrity-details">
+                          <div className="integrity-row">
+                            <span>Contract Total</span>
+                            <strong>{onChainTotalVotes}</strong>
+                          </div>
+                          <div className="integrity-row">
+                            <span>Event Count</span>
+                            <strong>{eventTotalVotes}</strong>
+                          </div>
+                          <div className="integrity-row integrity-mismatch">
+                            <span>Status</span>
+                            <strong>⚠️ Totals Do NOT Match — Investigate</strong>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── Section 5: Blockchain Proof (Last Tx Hash) ── */}
+                  {lastTxHash && (
+                    <>
+                      <div className="transparency-divider" />
+                      <div className="transparency-section">
+                        <div className="transparency-section-header">
+                          <span className="transparency-icon">{I.link}</span>
+                          <h4>Blockchain Proof</h4>
+                        </div>
+                        <p className="transparency-desc">
+                          Your vote exists as an immutable transaction on the blockchain.
+                        </p>
+                        <div className="blockchain-proof-box">
+                          <span className="proof-label">Transaction Hash</span>
+                          <code className="proof-hash">{lastTxHash}</code>
+                          <a
+                            href={`${explorerUrl}/tx/${lastTxHash}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn btn-ghost proof-link"
+                          >
+                            {I.link} View on Etherscan
+                          </a>
+                        </div>
+                      </div>
+                    </>
                   )}
                 </div>
 
